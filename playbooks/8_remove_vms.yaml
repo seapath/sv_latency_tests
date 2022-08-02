@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Remove all vms installed
+  hosts: hypervisors
+  tasks:
+    - name: Stop all VMs
+      cluster_vm:
+        name: "{{ item }}"
+        command: stop
+        force: true
+      loop: "{{ groups['VMs'] }}"
+      ignore_errors: yes
+    - name: Remove all Vms
+      cluster_vm:
+        name: "{{ item }}"
+        command: remove
+      loop: "{{ groups['VMs'] }}"
