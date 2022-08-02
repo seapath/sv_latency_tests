@@ -1,0 +1,8 @@
+[Unit]
+Description=Ptp4l daemon
+
+[Service]
+ExecStart=/usr/bin/ptp4l -f /etc/ptp4l.conf
+
+[Install]
+WantedBy=multi-user.target
