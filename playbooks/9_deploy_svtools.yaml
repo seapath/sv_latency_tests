@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Pull docker image
+  hosts: guest0
+  vars:
+    docker_registry_ip: 192.168.203.1
+    svtools_dir: /home/thibault/seapath/svtools
+  tasks:
+
+    - name: Allow docker to pull from insecure registry (HTTP)
+      template:
+        dest: /etc/docker/daemon.json
+        src: ../templates/daemon.json.j2
+
+    - name: Restart systemd docker service
+      systemd:
+        name: docker
+        state: restarted
+
+    - name: Pull svtools image
+      shell: "docker pull {{ docker_registry_ip }}:5000/svtools_dkimg"
+      # Would be better to do it with a docker module,
+      # but I didn't find how to do it,
+      # Seems like docker forces you to use DockerHub...
+
+    - name: Tag the image with a simpler name
+      shell: "docker tag {{ docker_registry_ip }}:5000/svtools_dkimg svtools"
+
+    - name: Copy svtools binary (built on local machine)
+      copy:
+        dest: /home/root/
+        src: "{{ svtools_dir }}/build/svtools"
+    - name: Allow executing svtools
+      file:
+        name: svtools
+        mode: a+x
+
+    - name: Copy command to lauch svtools
+      shell: >
+        echo "docker run --rm -it --privileged --network host
+        -v /home/root:/home/root svtools bash -c \"/home/root/svtools
+        -i {{ network_interface }}\"" > launch_receiver
+    - name: Allow executing the command
+      file:
+        name: launch_receiver
+        mode: a+x
