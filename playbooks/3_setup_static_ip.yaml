@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Configure a static IP
+  hosts: pxe_machines
+  vars:
+      mask: "{{ subnet | default(24) }}"
+
+  tasks:
+
+      - name: Mount the file system
+        shell:
+            cmd: >
+              mount /dev/disk/by-label/rootfs0 /mnt ||
+              mount /dev/disk/by-label/platform /mnt
+            warn: no
+        retries: 3
+        delay: 2
+        register: result
+        until: result.rc == 0
+
+      - name: Install the systemd-networkd configuration file
+        template:
+            dest: /mnt/etc/systemd/network/000-static-ip.network
+            src: ../templates/000-static-ip.network.j2
+        vars:
+            ipaddr: "{{ static_ip_ptp }}"
+            interface: "{{ network_interface | default(eth0) }}"
+
+      - name: Umount the file system
+        shell:
+            cmd: umount /mnt
+            warn: no
