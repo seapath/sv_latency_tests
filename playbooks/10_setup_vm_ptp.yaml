@@ -4,10 +4,18 @@
 - name: Configure PTP on the VMs
   hosts: guest0
   tasks:
+
     - name: Load ptp_kvm kernel module
       modprobe:
         name: ptp_kvm
         state: present
+
+    - name: Add ptp_kvm to modules loaded on startup
+      lineinfile:
+        create: yes
+        state: present
+        path: /etc/modules-load.d/ptp_kvm.conf
+        line: ptp_kvm
 
     - name: Stop and disable systemd-timesyncd
       systemd:
