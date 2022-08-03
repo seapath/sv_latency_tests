@@ -2,7 +2,7 @@
 Description=phc2sys daemon
 
 [Service]
-ExecStart=/usr/bin/phc2sys -a -r -S 1.0
+ExecStart=/usr/bin/phc2sys -s {{ network_interface }} -S 1.0 -O 0
 # Use the option -u < n > to print logs every n seconds
 # For example, to print logs every minutes, add : -u 60
 

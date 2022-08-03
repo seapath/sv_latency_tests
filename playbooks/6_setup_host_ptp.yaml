@@ -10,9 +10,9 @@
         src: ../templates/ptp/ptp4l.service
 
     - name: Copy phc2sys service configuration file
-      copy:
+      template:
         dest: /etc/systemd/system/phc2sys.service
-        src: ../templates/ptp/phc2sys.service
+        src: ../templates/ptp/phc2sys.service.j2
 
     - name: Copy ptp4l configuration file
       template:
