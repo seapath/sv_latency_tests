@@ -42,6 +42,11 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        <disk type="file" device="disk">
+            <driver name="qemu" type="qcow2" discard="unmap"/>
+            <source file="{{ guest_image }}"/>
+            <target dev="vda" bus="virtio"/>
+        </disk>
         <interface type="ethernet">
             <mac address="{{ mac_address }}"/>
             <target dev="{{ ovs_port }}" managed="no"/>

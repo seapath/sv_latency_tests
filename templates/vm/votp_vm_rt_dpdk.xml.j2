@@ -4,7 +4,8 @@
 
 <domain type="{{ vm_domaine | default('kvm') }}">
     <title>{{ title }}</title>
-    <description>VOTP guest with DPDK support, RT optimisation and CPU isolation
+    <description>
+        VOTP guest with DPDK support, RT optimisation and CPU isolation
     </description>
     <memory unit="GiB">1</memory>
     <currentMemory unit="GiB">1</currentMemory>
@@ -54,6 +55,11 @@
     </pm>
     <devices>
         <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        <disk type="file" device="disk">
+            <driver name="qemu" type="qcow2" discard="unmap"/>
+            <source file="{{ guest_image }}"/>
+            <target dev="vda" bus="virtio"/>
+        </disk>
         <interface type="vhostuser">
             <source type="unix" path="/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ ovs_port }}" mode="server" />
             <mac address="{{ mac_address }}" />
