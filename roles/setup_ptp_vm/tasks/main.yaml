@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Load ptp_kvm kernel module
+  modprobe:
+    name: ptp_kvm
+    state: present
+
+- name: Add ptp_kvm to modules loaded on startup
+  lineinfile:
+    create: yes
+    state: present
+    path: /etc/modules-load.d/ptp_kvm.conf
+    line: ptp_kvm
+
+- name: Stop and disable systemd-timesyncd
+  systemd:
+    name: systemd-timesyncd
+    state: stopped
+    enabled: no
+
+- name: Copy phc2sys systemd service
+  copy:
+    dest: /etc/systemd/system/phc2sys.service
+    src: phc2sys_vm.service
+
+- name: Start and enable phc2sys service
+  systemd:
+    name: phc2sys
+    state: started
+    enabled: yes
