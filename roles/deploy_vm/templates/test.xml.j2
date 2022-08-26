@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<domain type="kvm">
+    <name>{{ vm_name }}</name>
+    <description>
+        Guest with vm_features
+    </description>
+    <vcpu placement="static">{{ cpuset | length }}</vcpu>
+    <cputune>
+        {% for cpu in cpuset %}
+        {% if "isolated" in vm_features %}
+        <vcpupin vcpu="{{ loop.index - 1 }}" cpuset="{{ cpu }}"/>
+        {% endif %}
+        {% if "rt" in vm_features %}
+        <vcpusched vcpus="{{ loop.index - 1 }}" scheduler="fifo" priority="1" />
+        {% endif %}
+        {% endfor %}
+    </cputune>
+    {% if "rt" in vm_features %}
+    <cpu mode="host-passthrough">
+        <topology sockets="1" dies="1" cores="{{ cpuset | length }}" threads="1" />
+        <feature policy="require" name="tsc-deadline" />
+    {% else %}
+    <cpu mode="host-model" check="partial">
+    {% endif %}
+        {% if "dpdk" in vm_features %}
+        <numa>
+            {% if cpuset|length > 1 %}
+            <cell id="0" cpus="0-{{cpuset|length - 1 }}" memory="1" unit="GiB" memAccess="shared" />
+            {% else %}
+            <cell id="0" cpus="0" memory="1" unit="GiB" memAccess="shared" />
+            {% endif %}
+        </numa>
+        {% endif %}
+    </cpu>
+
+    <memory unit="GiB">1</memory>
+    <currentMemory unit="GiB">1</currentMemory>
+    <memoryBacking>
+        <hugepages>
+            <page size="1" unit="G"/>
+        </hugepages>
+        <nosharepages/>
+    </memoryBacking>
+
+    <os firmware="efi">
+        <type arch="x86_64" machine="pc-i440fx-4.1">hvm</type>
+        <boot dev="hd" />
+        <bootmenu enable="no" />
+        <bios useserial="yes" rebootTimeout="0" />
+        <smbios mode="emulate" />
+    </os>
+    <features>
+        <acpi />
+        <apic />
+        <vmport state="off" />
+
+
+        {% if "rt" in vm_features %}
+        <pmu state="off" />
+        {% endif %}
+
+
+    </features>
+    <clock offset="utc">
+        <timer name="rtc" tickpolicy="catchup" />
+        <timer name="pit" tickpolicy="delay" />
+        <timer name="hpet" present="no" />
+    </clock>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>destroy</on_crash>
+    <pm>
+        <suspend-to-mem enabled="no" />
+        <suspend-to-disk enabled="no" />
+    </pm>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+
+
+
+        {% if "dpdk" in vm_features %}
+        <interface type='vhostuser'>
+            <source type='unix' path='/var/run/openvswitch/vm-sockets/dpdkvhostuser_{{ ovs_port }}' mode='server'/>
+            <mac address="{{ mac_address }}" />
+            <model type='virtio'/>
+            <driver name='vhost' rx_queue_size='1024' tx_queue_size='1024' queues="{{ cpuset | length }}">
+                <host mrg_rxbuf='on'/>
+            </driver>
+        </interface>
+        {# {% elif "pci-passthrough" in vm_features %}
+        <hostdev mode="subsystem" type="pci" managed="yes">
+            <source>
+                <!-- The source is the NIC PIC address -->
+                <address domain="0x42" bus="0x42" slot="0x10" function="0x01"/>
+            </source>
+        </hostdev>
+        {% elif "sriov" in vm_features %}
+        <hostdev mode='subsystem' type='pci' managed='yes'>
+            <source>
+                <address bus='0x42' slot='0x10' function='0x01'/>
+            </source>
+        </hostdev> #}
+        {% else %}
+        {# <interface type="bridge">
+            <source bridge="br0"/>
+            <mac address="{{ mac_address }}"/>
+            <model type="virtio"/>
+        </interface> #}
+        <interface type="ethernet">
+            <mac address="{{ mac_address }}"/>
+            <target dev="{{ ovs_port }}" managed="no"/>
+            <model type="virtio"/>
+            <alias name="net0"/>
+            <address type="pci" domain="0x0000" bus="0x00" slot="0x02" function="0x0"/>
+        </interface>
+        {% endif %}
+
+
+
+        <disk type="file" device="disk">
+            <driver name="qemu" type="qcow2"/>
+            <source file="{{ guest_image }}"/>
+            <backingStore/>
+            <target dev="vda" bus="virtio"/>
+            <address type="pci" domain="0x0000" bus="0x00" slot="0x03" function="0x0"/>
+        </disk>
+        <controller type="pci" index="0" model="pci-root" />
+        <controller type="usb" index="0" model="none"/>
+        <serial type="pty">
+            <target type="isa-serial" port="0">
+                <model name="isa-serial" />
+            </target>
+        </serial>
+        <console type="pty">
+            <target type="serial" port="0" />
+        </console>
+        <input type="mouse" bus="ps2"/>
+        <input type="keyboard" bus="ps2"/>
+        <memballoon model="none" />
+        <watchdog model="ib700" action="poweroff" />
+    </devices>
+</domain>
