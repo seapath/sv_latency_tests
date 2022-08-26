@@ -1,0 +1,45 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+# This playbook setups PTP, boot kernel parameters, and
+# deploys the docker image (containing the libiec61850)
+# used by the SVTools program
+# Before running this playbook, you must run a local docker registry
+# with the SVTools docker image, see https://docs.docker.com/registry/
+
+- name: VM Post-install configuration
+  hosts: VMs
+  gather_facts: no
+  vars:
+    # Your local IP address, from where the VM will pull the image
+    docker_registry_ip: 192.168.204.1
+    # Keep void, will be set to extra_kernel_parameters_to_add
+    # if the VM feature 'task_isolation' is defined
+    extra_kernel_parameters:
+    extra_kernel_parameters_to_add: isolcpus=1 nohz_full=1 rcu_nocbs=1
+  tasks:
+
+    - wait_for_connection:
+
+    - name: Setup Phc2sys daemon on VM
+      include_role:
+        name: setup_ptp_vm
+
+    - name: Deploy the container used by svtools
+      include_role:
+        name: deploy_svtools
+
+    # If task_isolation
+    - name: set kernel parameters
+      set_fact:
+        extra_kernel_parameters: "{{ extra_kernel_parameters_to_add }}"
+      when: "'task_isolation' in vm_features"
+
+    - name: Add isolcpus boot parameter
+      include_role:
+        name: setup_kernel_param
+      vars:
+        config_file: EFI/BOOT/grub.cfg
+
+- import_playbook: 6_deploy_svtools.yaml
