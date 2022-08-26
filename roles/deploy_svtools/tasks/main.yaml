@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Allow docker to pull from insecure registry (HTTP)
+  template:
+    dest: /etc/docker/daemon.json
+    src: daemon.json.j2
+
+- name: Restart systemd docker service
+  systemd:
+    name: docker
+    state: restarted
+
+- name: Pull svtools image
+  shell: "docker pull {{ docker_registry_ip }}:5000/svtools_dkimg"
+  # Would be better to do it with a docker module,
+  # but I didn't find how to do it,
+  # Seems like docker forces you to use DockerHub with the module...
+
+- name: Tag the image with a simpler name
+  shell: "docker tag {{ docker_registry_ip }}:5000/svtools_dkimg svtools"
