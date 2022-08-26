@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Mount the file system
+  shell:
+      cmd: >
+        mount /dev/disk/by-label/rootfs0 /mnt ||
+        mount /dev/disk/by-label/platform /mnt
+      warn: no
+  retries: 3
+  delay: 2
+  register: result
+  until: result.rc == 0
+
+- name: Install the systemd-networkd configuration file
+  template:
+      dest: /mnt/etc/systemd/network/000-static-ip.network
+      src: 000-static-ip.network.j2
+
+- name: Umount the file system
+  shell:
+      cmd: umount /mnt
+      warn: no
