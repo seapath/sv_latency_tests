@@ -1,0 +1,89 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+all:
+
+  vars:
+
+    # Variables for test
+    log_name: temp4
+    timeout_test: 120
+
+    # Ansible variables
+    ansible_connection: ssh
+    # Always connect as root
+    ansible_user: root
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    # Change according to your setup
+    image_directory: ~/seapath/images/
+    # DNS server. Leave it empty to not set the DNS server
+    dns_server:
+    # Gateway IP Addr. The variable must be define but can be empty
+    gateway_addr:
+
+  children:
+
+    # Specific to SFL, to retrieve images on the build machine
+    build_machines:
+      hosts:
+        jean:
+          ansible_host: 192.168.216.4
+          # Change your username
+          ansible_user: tsourdin
+      vars:
+        # Change according to your path
+        src_image_path: ~/seapath/build/tmp/deploy/images
+
+    pxe_machines:
+      hosts:
+        pxe_hypervisor:
+          # Set IP address according to your setup
+          # (IP set by the DHCP server in the PXE container)
+          ansible_host: 192.168.204.95
+
+    hypervisors:
+      hosts:
+        seapath:
+          # Set IP address according to your setup
+          ansible_host: 192.168.202.4
+          # The network interface that will be used by the hypervisor to
+          # communicate across the network
+          network_interface: enp66s0f0
+          ip_addr: "{{ ansible_host }}"
+          extra_kernel_parameters: >
+            isolcpus=4-11 nohz_full=4-11 rcu_nocbs=4-11
+            default_hugepagesz=1G hugepagesz=1G hugepages=7
+            intel_iommu=on vfio_iommu_type1.allow_unsafe_interrupts=1
+
+    VMs:
+      # VM group vars
+      vars:
+        ansible_user: root
+        network_interface: enp0s2
+        ip_addr: "{{ ansible_host }}"
+      hosts:
+        guest0:
+          # On the VLAN used for SV, random mac address
+          # The last byte of the IP address must be equal to
+          # the last byte of the MAC address (a script initializes
+          # the IP on the first VM boot)
+          ansible_host: 192.168.204.15
+          port: 8080
+          cpuset: [8, 9, 10, 11]
+          ovs_port: br0P0
+          mac_address: 5e:ff:56:a2:af:15
+          vm_features:
+            - rt
+            - isolated
+            - dpdk
+
+    other_machines:
+    vars:
+      hosts:
+        sender:
+          ansible_host: 192.168.202.3
+          ansible_user: sender
+        ptp:
+          ansible_host: 192.168.202.2
+          ansible_user: ptp
