@@ -1,0 +1,10 @@
+PROMPT 0
+TIMEOUT 0
+
+ALLOWOPTIONS 1
+SERIAL 0 115200
+
+DEFAULT boot
+LABEL boot
+KERNEL /vmlinuz
+APPEND label=boot root=PARTUUID=24f8fe52-02 rootwait console=ttyS0,115200 console=tty0 systemd.unified_cgroup_hierarchy=0 audit=0 slab_nomerge pti=on slub_debug=ZF rootwait rootfstype=ext4 init=/sbin/init.sh {{ extra_kernel_parameters }}

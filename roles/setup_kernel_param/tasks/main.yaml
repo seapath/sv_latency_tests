@@ -1,0 +1,35 @@
+# Test if the system is booting with bios or uefi
+- name: Test if efi partition is present
+  stat:
+    path: /dev/disk/by-label/efi
+  register: efi_part
+
+- name: mount EFI partition # If there is an efi partition
+  shell:
+    cmd: mount /dev/disk/by-label/efi /mnt
+    warn: false
+  when: efi_part.stat.exists
+
+- name: mount boot partition # If BIOS
+  shell:
+    cmd: mount /dev/disk/by-label/boot /mnt
+    warn: false
+  when: not efi_part.stat.exists
+
+- name: Set extra kernel parameters # If EFI
+  template:
+    dest: "/mnt/{{ config_file }}"
+    src: grub.cfg.j2
+  when: efi_part.stat.exists
+
+- name: Set extra kenel parameters # If BIOS
+  template:
+    dest: "/mnt/{{ config_file }}"
+    src: syslinux.cfg.j2
+  when: not efi_part.stat.exists
+
+- name: umount /mnt
+  shell: umount /mnt
+
+- reboot:
+- wait_for_connection:
