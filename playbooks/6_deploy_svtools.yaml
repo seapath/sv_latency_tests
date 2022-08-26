@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+# This playbook just copies the svtools binary on
+# all VMs. Its aim is to ease the test of svtools
+# modifications on VMs
+
+- name: deploy svtools
+  hosts: VMs
+  vars:
+    # Change according to your local path
+    svtools_dir: /home/thibault/seapath/svtools
+  tasks:
+    - name: Copy svtools binary (built on local machine)
+      copy:
+        dest: /home/root/
+        src: "{{ svtools_dir }}/build/svtools"
+
+    - name: Allow executing svtools
+      file:
+        name: svtools
+        mode: a+x
