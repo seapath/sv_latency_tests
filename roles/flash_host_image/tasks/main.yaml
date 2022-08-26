@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+# Wait until the pxe machine is up
+- name: Wait for connection
+  wait_for_connection:
+
+# Flash the host image
+- name: import image disk
+  copy:
+    dest: /tmp/disk.wic.gz
+    src: "{{ image }}"
+- name: import image disk bmap file
+  copy:
+    dest: /tmp/disk.wic.bmap
+    src: "{{ bmap }}"
+- name: copy the image on disk
+  shell:
+    cmd: flash -i /tmp/disk.wic.gz -d "{{ disk }}"
+
+# Resize the last partition to fill disk
+- name: read disk infos
+  parted:
+    device: "{{ disk }}"
+  register: disk_info
+- name: remove persistent partition
+  parted:
+    device: "{{ disk }}"
+    number: 4
+    state: absent
+- name: add persistent partition
+  parted:
+    device: "{{ disk }}"
+    number: 4
+    # start address is the same start as the previous one
+    part_start: "{{ disk_info.partitions[-1].begin }}KiB"
+    state: present
+- name: create the filesystem
+  filesystem:
+    device: /dev/sda4
+    fstype: ext4
+    force: yes
+    opts: -L persistent
