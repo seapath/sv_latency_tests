@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Deploy VMs
+  hosts: hypervisors
+  vars:
+    # Path of the VM image on your machine
+    disk_path: "{{ image_directory }}/guest_efi/guest-efi.qcow2"
+    # Path of the image on the seapath host
+    vm_path: /var/lib/libvirt/images
+  tasks:
+    # Loop over the list of VMs :
+    - include_role:
+        name: deploy_vm
+      vars:
+        # Collect the variables defined in the "VMs" group
+        vm_name: "{{ hostvars[item].inventory_hostname }}"
+        cpuset: "{{ hostvars[item].cpuset }}"
+        ovs_port: "{{ hostvars[item].ovs_port }}"
+        mac_address: "{{ hostvars[item].mac_address }}"
+        guest_image: "{{ vm_path }}/{{ vm_name }}.qcow2"
+        vm_features: "{{ hostvars[item].vm_features }}"
+      loop: "{{ groups['VMs'] }}"
