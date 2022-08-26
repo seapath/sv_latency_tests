@@ -1,0 +1,55 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+# This playbook flashes the host image and
+# does all the "static" configuration.
+# (Configuration of the host that does not depend of
+# the vm_features chosen on the host)
+
+- name: Flash and setup hypervisor image
+  hosts: pxe_machines
+  gather_facts: no
+
+  vars:
+    ### Flash :
+    # The disk where the SEAPTAH distribution will be installed
+    # In general: /dev/sda
+    disk: /dev/sda
+    # Host image to flash
+    image: "{{ image_directory }}/host_bios/host-bios.wic.gz"
+    bmap: "{{ image | splitext | first }}.bmap"
+
+    ### Static IP :
+    # The network interface to be used for the first boot,
+    # will also be used by PTP
+    interface: "{{ hostvars['seapath'].network_interface }}"
+    # IP used by PTP and SSH
+    ipaddr: "{{ hostvars['seapath'].ansible_host }}"
+    mask: 24
+
+  tasks:
+    - wait_for_connection:
+    - import_role:
+        name: flash_host_image
+    - import_role:
+        name: setup_static_ip
+    - shell: reboot
+
+- name: Wait for connnection, setup PTP and kernel parameters
+  hosts: hypervisors
+  gather_facts: no
+  vars:
+    # Extra kernel parameters variables
+    config_file: syslinux.cfg
+    extra_kernel_parameters: "{{ hostvars['seapath'].extra_kernel_parameters }}"
+  tasks:
+    - name: Wait for connection
+      wait_for_connection:
+        delay: 15
+    - name: Add PTP systemd services
+      import_role:
+        name: setup_ptp_host
+    - name: Setup Additionnal kernel parameters
+      import_role:
+        name: setup_kernel_param
