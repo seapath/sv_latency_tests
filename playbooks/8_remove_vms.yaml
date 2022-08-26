@@ -4,15 +4,21 @@
 - name: Remove all vms installed
   hosts: hypervisors
   tasks:
-    - name: Stop all VMs
-      cluster_vm:
-        name: "{{ item }}"
-        command: stop
-        force: true
+
+    - name: Stop VMs
+      shell: "virsh destroy {{ hostvars[item].inventory_hostname }}"
       loop: "{{ groups['VMs'] }}"
-      ignore_errors: yes
-    - name: Remove all Vms
-      cluster_vm:
-        name: "{{ item }}"
-        command: remove
+      ignore_errors: true
+
+    - name: Remove VMs
+      shell: >
+        "virsh managedsave-remove {{ hostvars[item].inventory_hostname }} &&
+        virsh undefine --nvram {{ hostvars[item].inventory_hostname }}"
       loop: "{{ groups['VMs'] }}"
+      ignore_errors: true
+
+    - name: Remove disks
+      shell:
+        cmd: rm /var/lib/libvirt/images/*
+        warn: false
+        ignore_errors: true
