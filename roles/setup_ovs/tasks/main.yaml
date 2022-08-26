@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Create OVS configuration
+  template:
+    src: ovs_configuration.json.j2
+    dest: /etc/ovs_configuration.json
+    validate: setup_ovs.py -v -c -f %s
+  register: ovs_conf
+
+- name: Restart votp-config_ovs
+  systemd:
+    name: votp-config_ovs
+    state: restarted
+  when:
+    - ovs_conf.changed
+
+- name: Register reboot
+  set_fact:
+    need_reboot: true
+  when:
+    - ovs_conf.changed
