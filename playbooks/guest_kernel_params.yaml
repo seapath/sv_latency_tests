@@ -1,0 +1,9 @@
+- name: Setup Kernel Params
+  hosts: VMs
+  vars:
+    config_file: EFI/BOOT/grub.cfg
+    extra_kernel_parameters: >
+      isolcpus=1 nohz_full=1 rcu_nocbs=1
+  tasks:
+    - import_role:
+        name: setup_kernel_param

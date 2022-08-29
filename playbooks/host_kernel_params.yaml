@@ -1,0 +1,11 @@
+- name: Setup Kernel Params
+  hosts: hypervisors
+  vars:
+    config_file: syslinux.cfg
+    extra_kernel_parameters: >
+      isolcpus=4-11 nohz_full=4-11 rcu_nocbs=4-11
+      default_hugepagesz=1G hugepagesz=1G hugepages=7
+      intel_iommu=on vfio_iommu_type1.allow_unsafe_interrupts=1
+  tasks:
+    - import_role:
+        name: setup_kernel_param
