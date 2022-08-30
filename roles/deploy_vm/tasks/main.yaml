@@ -1,44 +1,54 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+- name: Check if the .qcow2 has already been copied
+  stat:
+    path: "{{ vm_path }}/{{ vm_name }}.qcow2"
+  register: disk_present
+
 - name: copy the disk on target
   copy:
     src: "{{ disk_path }}"
-    dest: "{{ vm_path }}/guest0.qcow2"
-- name: "Create a first VM from template"
+    dest: "{{ vm_path }}/{{ vm_name }}.qcow2"
+  when: not disk_present.stat.exists
+
+- name: Copy template on target
+  template:
+    src: test.xml.j2
+    dest: "/tmp/config_{{ vm_name }}.xml"
+
+- name: Register if VM is defined
+  shell: "virsh list --all | grep {{ vm_name }}"
+  register: defined
+  failed_when: false
+  no_log: True
+
+- name: Register if VM is running
+  shell: "virsh list | grep {{ vm_name }}"
+  register: running
+  failed_when: false
+  no_log: True
+  when: defined.rc == 0 # Run if the VM exists
+
+- name: stop {{ vm_name }}
+  shell: "virsh destroy {{ vm_name }}"
+  when: defined.rc ==0 and running.rc == 0
+
+- name: remove {{ vm_name }}
+  shell: >
+    virsh managedsave-remove {{ vm_name }}
+    && virsh undefine --nvram {{ vm_name }}
+  when: defined.rc == 0
+
+- name: define vm
+  shell: virsh define /tmp/config_{{ vm_name }}.xml
+
+- name: Remove template
+  ansible.builtin.file:
+    path: /tmp/config_{{ vm_name }}.xml
+    state: absent
+
+- name: Start {{ vm_name }}
   cluster_vm:
-    name: guest0
-    command: create
-    system_image: "{{ vm_path }}/guest0.qcow2"
-    force: true
-    enable: false
-    xml: >-
-      {{ lookup('template', xml_template,
-      template_vars=dict(
-        title='guest0',
-        ovs_port='br0P0',
-        cpuset=3,
-        mac_address=hostvars["guest0"].mac_address,
-        guest_image="{{ vm_path }}/guest0.qcow2"),
-      errors='strict') }}
-- name: copy the disk on target
-  copy:
-    remote_src: yes
-    src: "{{ vm_path }}/guest0.qcow2"
-    dest: "{{ vm_path }}/guest1.qcow2"
-- name: "Create a second VM from template"
-  cluster_vm:
-    name: guest1
-    command: create
-    system_image: "{{ vm_path }}/guest1.qcow2"
-    force: true
-    enable: false
-    xml: >-
-      {{ lookup('template', xml_template,
-      template_vars=dict(
-        title='guest1',
-        ovs_port='br0P1',
-        cpuset=5,
-        mac_address=hostvars["guest1"].mac_address,
-        guest_image="{{ vm_path }}/guest1.qcow2"),
-      errors='strict') }}
+    name: "{{ vm_name }}"
+    command: start
