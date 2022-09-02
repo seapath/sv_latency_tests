@@ -6,8 +6,7 @@
   tasks:
     - name: Fetch .qcow2 guest image
       fetch:
-        src: >
-          "{{ src_image_path }}/votp-guest/
-          seapath-guest-efi-dbg-image-votp-guest.wic.qcow2"
+        src: "{{ src_image_path }}/votp-guest/\
+              seapath-guest-efi-dbg-image-votp-guest.wic.qcow2"
         dest: "{{ image_directory }}//guest_efi/guest-efi.qcow2"
         flat: yes

@@ -17,15 +17,15 @@
   hosts: VMs
   tasks:
 
-    - name: Copy command to launch svtools
-      shell: >
+    - name: Copy command to lauch svtools
+      shell: >-
         echo "docker run --rm --privileged --network host
         -v /home/root:/home/root svtools bash -c \"timeout {{ timeout_test }}
         /home/root/svtools --port {{ port }} -i {{ network_interface }}
         --rt_fifo_priority 40\"" > start_receiver
 
-    - name: Copy command to launch svtools (+ taskset)
-      shell: >
+    - name: Copy command to lauch svtools (+ taskset)
+      shell: >-
         echo "docker run --rm --privileged --network host
         -v /home/root:/home/root svtools bash -c
         \"timeout {{ timeout_test }} taskset -c 2-3
@@ -55,16 +55,16 @@
   tasks:
     - name: Concatenate the log names into "string"
       set_fact:
-        string: >
-          {{ string }} ../logs/
-          {{log_name}}_{{ hostvars[item].inventory_hostname }}"
+        string: >-
+          {{ string }}
+          ../logs/{{log_name}}_{{ hostvars[item].inventory_hostname }}
       loop: "{{ groups['VMs'] }}"
 
     - name: Set command name
       set_fact:
-        command: >
+        command: >-
           {{ bin_directory }}/plot_logs -t {{ timeout_test }}
-          -f ../logs/{{ log_name }} {{ string }}
+          -f ../logs/{{ log_name }} -m max {{ string }}
 
     - name: Start plot
       shell: "{{ command }}"

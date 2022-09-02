@@ -12,8 +12,8 @@
 
     - name: Remove VMs
       shell: >
-        "virsh managedsave-remove {{ hostvars[item].inventory_hostname }} &&
-        virsh undefine --nvram {{ hostvars[item].inventory_hostname }}"
+        virsh managedsave-remove {{ hostvars[item].inventory_hostname }} &&
+        virsh undefine --nvram {{ hostvars[item].inventory_hostname }}
       loop: "{{ groups['VMs'] }}"
       ignore_errors: true
 
@@ -21,4 +21,4 @@
       shell:
         cmd: rm /var/lib/libvirt/images/*
         warn: false
-        ignore_errors: true
+      ignore_errors: true
