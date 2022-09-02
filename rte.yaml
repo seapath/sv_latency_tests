@@ -6,8 +6,9 @@ all:
   vars:
 
     # Variables for test
-    log_name: temp4
-    timeout_test: 120
+    log_name: tmp0
+    timeout_test: 30
+    bin_directory: ~/seapath/plot-sv-log-tools
 
     # Ansible variables
     ansible_connection: ssh
@@ -77,7 +78,7 @@ all:
             - rt
             - isolated
             - dpdk
-
+            - task_isolation
     other_machines:
     vars:
       hosts:
