@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+
+# This playbook launches the latency test
+
+- name: Start the log-receiver on localhost
+  hosts: localhost
+  tasks:
+    - name: Execute receive program
+      shell: >
+        {{ bin_directory }}/receive_logs -p {{ hostvars[item].port }}
+        -f ../logs/{{ log_name }}_{{ hostvars[item].inventory_hostname }} &
+      loop: "{{ groups['VMs'] }}"
+
+- name: Copy command to launch svtools
+  hosts: VMs
+  tasks:
+
+    - name: Copy command to launch svtools
+      shell: >
+        echo "docker run --rm --privileged --network host
+        -v /home/root:/home/root svtools bash -c \"timeout {{ timeout_test }}
+        /home/root/svtools --port {{ port }} -i {{ network_interface }}
+        --rt_fifo_priority 40\"" > start_receiver
+
+    - name: Copy command to launch svtools (+ taskset)
+      shell: >
+        echo "docker run --rm --privileged --network host
+        -v /home/root:/home/root svtools bash -c
+        \"timeout {{ timeout_test }} taskset -c 2-3
+        /home/root/svtools --port {{ port }}
+        -i {{ network_interface }}\"" > start_receiver
+      when: cpuset|length > 1 and 'task_isolation' in vm_features
+
+    - name: Allow executing the command
+      file:
+        name: start_receiver
+        mode: a+x
+
+# In a separate play, to make the executions closer
+- name: Launch SVTools
+  hosts: VMs
+  tasks:
+    - name: Start SVTools in the docker container
+      shell: ./start_receiver
+      async: "{{ timeout_test }}"
+      poll: 0
+
+- name: Start the plot program
+  hosts: localhost
+  vars:
+    string:
+    command:
+  tasks:
+    - name: Concatenate the log names into "string"
+      set_fact:
+        string: >
+          {{ string }} ../logs/
+          {{log_name}}_{{ hostvars[item].inventory_hostname }}"
+      loop: "{{ groups['VMs'] }}"
+
+    - name: Set command name
+      set_fact:
+        command: >
+          {{ bin_directory }}/plot_logs -t {{ timeout_test }}
+          -f ../logs/{{ log_name }} {{ string }}
+
+    - name: Start plot
+      shell: "{{ command }}"
