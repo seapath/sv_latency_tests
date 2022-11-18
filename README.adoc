@@ -1,0 +1,131 @@
+= Setup machines with ansible - RTE project
+
+This repository contains different playbooks, used to automate the configuration
+of the machines used in this projetct.
+The setup is detailled below.
+To run a playbook, you can use the following command:
+
+```
+ansible-playbook -i inventories/rte.yaml playbooks/<your_playbook>
+```
+
+= Setup - inventory
+
+== Machines
+
+Three machines are used in this setup:
+
+* A PTP master, used to synchronize the two other machines with the PTP protocol
+  ** This machine is preinstalled with a linux distribution
+  ** PTP is installed and enabled as a systemd service.
+    When the PTP master is started, it serves its system time through the PTP
+    protocol.
+* A sender machine, used to send IEC61850 frames (Sampled Values)
+  ** This machine must be preinstalled with a linux distribution
+  ** PTP is running as a service (ptp4l running as a slave), and synchronizes the
+    system clock (phc2sys)
+  ** RTE's OUISTITI docker container is installed
+* A SEAPATH machine, used to host different VMs, which will receive the frames
+  ** This machine will be flashed and configured via ansible playbooks
+
+== Fetch generated images
+
+Images are generated on the build server `jean`.
+Two playbooks allow to fetch Host and Guest images from this build server.
+
+== SEAPATH machine flash
+
+=== PXE Repository
+
+In order to automate the flash, the machine which will run the SEAPATH
+distribution is booted via PXE.
+The container repository of the Seapath project must be used.
+
+* Gerrit repository : https://g1.sfl.team/admin/repos/rte/votp/containers,general
+* Github repository : https://github.com/seapath/containers
+
+A DHCP server will set an IP that you need to provide in the rte.yaml inventory.
+Then seapath-flash-pxe image will be loaded on the machine, and booted.
+
+=== Flash and "static" setup
+
+When the machine has booted via PXE, use the playbook `2_flash_host.yaml` to
+flash the seapath-host image, and configure the host.
+A few variables need to be set according to your setup :
+
+* First, in the inventory `rte.yaml`:
+  ** In the group `pxe_machines`:
+    *** The IP address of the machine, once booted via PXE
+  * In the group `hypervisors`:
+    ** The name of the network interface you want to use for SSH connection
+    ** The fixed IP address this interface should be assigned to
+    ** Then, if you need to, change custom kernel boot parameters by editing
+      `extra_kernel_parameters`. Those will also be changeable with another
+      playbook.
+
+To find the IP of the PXE machine and the name of the network interface, you
+will need to log into the system with a separate screen or a serial connection
+on the first time.
+Once the flash has finished, the playbook will setup the fixed IP, reboot into
+the host system, setups PTP, and sets custom boot kernel parameters.
+
+=== Network Configuration
+
+Once all this configuration has been done, the network must be configured with
+`3_deploy_config.yaml`
+As multiple configurations should be tested, with or without DPDK, with or
+without SR-IOV, this playbook takes the variable `config` as a parameter
+The aim is to be able to deploy different kinds of network on the same host at
+the same time, unfortunately, this feature has not been developped so far.
+Currently, available options are just `dpdk`, `sriov` and `2nd`, to add another
+network interface.
+
+=== VM Deployement and setup
+
+* VMs are deployed with `4_deploy_vm.yaml`
+* This playbook uses the VMs variables defined in the inventory, in the `VMs`
+  group, and the role `deploy_vm`. This role customises the xml libvirt
+  configuration file in `templates/config.xml.j2`. Especially, the following
+  variables can be modified:
+  ** `port`: Port used to report logs (detailled later)
+  ** `cpuset`: Set of host CPUs used by the guest, e.g. [4,5]
+  ** `ovs_port`
+  ** `mac_address`
+  ** `guest_image`
+  ** `vm_features`: Dictionnary of features. Available values are:
+    *** 'rt'
+    *** 'isolated'
+    *** 'dpdk'
+    *** 'pci-passthrough' and 'sriov' are not currently implemented.
+* Before being managed with ansible, VM's must be assigned a fixed IP. To do so,
+  a recipe was added to the `seapath-guest-efi-dbg` image in the Yocto Project,
+  adding a fixed IP to the interface `enp0s2`. On the first boot of a VM, a
+  systemd service launches and adds the following ip address to the interface:
+  `192.168.203.<last byte of the MAC address>`. So, be sure to set
+  `ansible_host` last byte to the last byte of the mac address.
+
+=== VM Postinstall
+
+==== SVTools
+
+The SV receiver is provided with a docker container (where the libiec61850 is
+pre-installed). Build it using the SVTool repository:
+https://github.com/vermeulenthi/svtools
+Before using deploy_svtools.yaml, a local registry containing the image must be
+created on your machine:
+
+```
+docker run -d -p 5000:5000 --name registry registry:2
+docker tag svtools_dkimg:latest localhost:5000/svtools_dkimg:latest
+docker push localhost:5000/svtools_dkimg:latest
+```
+
+(Following the docker documentation : https://docs.docker.com/registry/)
+After having launched the local registry, you can use the playbook
+`5_vm_postinstall`. This will setup PTP sync on the VM and deploy svtools.
+* The role `setup_ptp_vm` loads the `kvm_ptp` module, which creates a virtual
+  PTP clock under `/dev/ptp0` and starts phc2sys service to synchronize the
+  systemclock with this paravirtualized PTP device. The playbook then deploys
+  svtools software.
+* Then, svtools is pulled from the registry
+* Finally, the binary is copied from your local directory to the VM
