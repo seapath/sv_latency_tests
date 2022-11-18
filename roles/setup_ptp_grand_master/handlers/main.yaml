@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: restart systemd-networkd
+  ansible.builtin.systemd:
+    name: systemd-networkd
+    state: restarted

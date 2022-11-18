@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Configure network interfaces
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/network/{{ item }}"
+  with_items:
+    - 00-ptp.netdev
+    - 01-ptp.network
+    - 00-wired.network
+  notify: restart systemd-networkd
+
+- name: running ptp4l as PTP grand master clock
+  ansible.builtin.systemd:
+    name: ptp4l@ptp
+    state: started
+    enabled: yes

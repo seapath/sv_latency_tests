@@ -16,10 +16,8 @@ ansible-playbook -i inventories/rte.yaml playbooks/<your_playbook>
 Three machines are used in this setup:
 
 * A PTP master, used to synchronize the two other machines with the PTP protocol
-  ** This machine is preinstalled with a linux distribution
-  ** PTP is installed and enabled as a systemd service.
-    When the PTP master is started, it serves its system time through the PTP
-    protocol.
+  ** This machine uses a Debian 11 distribution with the ptp4linux package
+     installed
 * A sender machine, used to send IEC61850 frames (Sampled Values)
   ** This machine must be preinstalled with a linux distribution
   ** PTP is running as a service (ptp4l running as a slave), and synchronizes the
@@ -27,6 +25,12 @@ Three machines are used in this setup:
   ** RTE's OUISTITI docker container is installed
 * A SEAPATH machine, used to host different VMs, which will receive the frames
   ** This machine will be flashed and configured via ansible playbooks
+
+== Configure the PTP grand master clock
+
+Run the playbook `setup_grand_master.yaml`.
+When the PTP master is started, it serves its system time through the PTP
+protocol.
 
 == Fetch generated images
 

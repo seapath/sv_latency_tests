@@ -22,6 +22,8 @@ all:
     dns_server:
     # Gateway IP Addr. The variable must be define but can be empty
     gateway_addr:
+    # VLAN use for PTP
+    ptp_vlan: 20
 
   children:
 
@@ -80,11 +82,13 @@ all:
             - dpdk
             - task_isolation
     other_machines:
-    vars:
       hosts:
         sender:
           ansible_host: 192.168.202.3
           ansible_user: sender
-        ptp:
-          ansible_host: 192.168.202.2
-          ansible_user: ptp
+        ptpmaster:
+          ansible_host: "192.168.216.127"
+          # Interface use for PTP
+          ptp_master_network_interface: eno1
+          # PTP interface ip address
+          ptp_master_address: "10.0.25.2"

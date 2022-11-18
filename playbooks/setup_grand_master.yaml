@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
+
+---
+- name: Add hardened in SEAPTAH Debian machines
+  hosts: ptpmaster
+  roles:
+    - setup_ptp_grand_master
