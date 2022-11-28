@@ -1,15 +1,30 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
-- name: Configure network interfaces
+
+- name: Check 00-wired.network is present
+  stat:
+    path: "/etc/systemd/network/00-wired.network"
+  register: stat_result
+
+- name: Add 00-wired.network to the systemd-networkd configuration files list
+  set_fact:
+    network_template: "{{ network_template + ['00-wired.network'] }}"
+  when: not stat_result.stat.exists
+
+- name: Configure ptp vlan interfaces
   template:
     src: "{{ item }}.j2"
     dest: "/etc/systemd/network/{{ item }}"
-  with_items:
-    - 00-ptp.netdev
-    - 01-ptp.network
-    - 00-wired.network
+  with_items: "{{ network_template }}"
   notify: restart systemd-networkd
+
+- name: Add ptp vlan
+  lineinfile:
+    dest: /etc/systemd/network/00-wired.network
+    insertafter: '[Network]'
+    line: "VLAN=ptp"
+    state: present
 
 - name: running ptp4l as PTP grand master clock
   ansible.builtin.systemd:
