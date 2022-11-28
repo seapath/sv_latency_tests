@@ -1,4 +1,7 @@
-= Setup machines with ansible - RTE project
+// Copyright (C) 2019-2022 Savoir-faire Linux, Inc.
+// SPDX-License-Identifier: CC-BY-4.0
+
+= Setup machines with ansible - SEAPATH project
 
 This repository contains different playbooks, used to automate the configuration
 of the machines used in this projetct.
@@ -6,7 +9,7 @@ The setup is detailled below.
 To run a playbook, you can use the following command:
 
 ```
-ansible-playbook -i inventories/rte.yaml playbooks/<your_playbook>
+ansible-playbook -i inventory.yaml playbooks/<your_playbook>
 ```
 
 = Setup - inventory
@@ -45,7 +48,6 @@ In order to automate the flash, the machine which will run the SEAPATH
 distribution is booted via PXE.
 The container repository of the Seapath project must be used.
 
-* Gerrit repository : https://g1.sfl.team/admin/repos/rte/votp/containers,general
 * Github repository : https://github.com/seapath/containers
 
 A DHCP server will set an IP that you need to provide in the rte.yaml inventory.
